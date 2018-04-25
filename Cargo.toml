@@ -1,12 +1,12 @@
 [package]
-authors = ["Jorge Aparicio <jorge@japaric.io>"]
+authors = ["Kerem Kat <keremkat@gmail.com>, Jorge Aparicio <jorge@japaric.io>"]
 categories = ["embedded", "no-std"]
-description = "A template for building applications for ARM Cortex-M microcontrollers"
+description = "A crate to compile nRF51822 programs, which is a variant of ARM Cortex-M0"
 keywords = ["arm", "cortex-m", "template"]
 license = "MIT OR Apache-2.0"
-name = "cortex-m-quickstart"
-repository = "https://github.com/japaric/cortex-m-quickstart"
-version = "0.2.7"
+name = "nrf51822-quickstart"
+repository = "https://github.com/krk/nrf61822-quickstart"
+version = "0.1.0"
 
 [dependencies]
 cortex-m = "0.4.0"
@@ -18,9 +18,9 @@ panic-semihosting = "0.1.0"
 #alloc-cortex-m = "0.3.3"
 
 # Uncomment for the device example.
-# [dependencies.stm32f103xx]
-# features = ["rt"]
-# version = "0.9.0"
+[dependencies.nrf51822]
+features = ["rt"]
+version = "0.1.1"
 
 [profile.release]
 debug = true
