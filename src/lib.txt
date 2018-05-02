@@ -344,6 +344,6 @@
 //! the `mkfifo itm.dump` command. You can use `itmdump`'s *follow* mode (-F) to get named pipe like
 //! output.
 
-#![no_std]
+// #![no_std]
 
-pub mod examples;
+// pub mod examples;
