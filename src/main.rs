@@ -2,10 +2,9 @@
 #![deny(warnings)]
 #![feature(const_fn)]
 extern crate cortex_m;
-// extern crate cortex_m_rt; // included in the device crate
 extern crate cortex_m_semihosting;
 
-#[macro_use(exception, interrupt)]
+#[macro_use(interrupt)]
 extern crate nrf51822;
 
 extern crate panic_abort; // panicking behavior
@@ -22,44 +21,48 @@ static HSTDOUT: Mutex<RefCell<Option<HStdout>>> = Mutex::new(RefCell::new(None))
 
 static NVIC: Mutex<RefCell<Option<cortex_m::peripheral::NVIC>>> = Mutex::new(RefCell::new(None));
 
+static NRFP: Mutex<RefCell<Option<nrf51822::Peripherals>>> = Mutex::new(RefCell::new(None));
+
 fn main() {
-    // DO NOT try to flash this program, it only compiles.
     let global_p = cortex_m::Peripherals::take().unwrap();
+    let nrf_p = nrf51822::Peripherals::take().unwrap();
+
     interrupt::free(|cs| {
         let hstdout = HSTDOUT.borrow(cs);
         if let Ok(fd) = hio::hstdout() {
             *hstdout.borrow_mut() = Some(fd);
         }
 
+        {
+            let timer1: &nrf51822::timer0::RegisterBlock = &*nrf_p.TIMER1;
+
+            timer1.mode.write(|w| w.mode().timer());
+            timer1.tasks_clear.write(|w| unsafe { w.bits(1) });
+            timer1.prescaler.write(|w| unsafe { w.bits(15) });
+
+            // TODO TIMER doesn'T seem to be affected/initialized correctly.
+            timer1.cc[0].write(|w| unsafe { w.bits(1000) });
+            timer1.intenset.write(|w| w.compare0().set());
+            timer1.tasks_start.write(|w| unsafe { w.bits(1) });
+        }
+
+        *NRFP.borrow(cs).borrow_mut() = Some(nrf_p);
+
         let mut nvic = global_p.NVIC;
-        nvic.enable(Interrupt::TIMER0);
+        nvic.enable(Interrupt::TIMER1);
         *NVIC.borrow(cs).borrow_mut() = Some(nvic);
 
         let mut syst = global_p.SYST;
         syst.set_clock_source(SystClkSource::Core);
-        syst.set_reload(8_000_000); // 1s
+        syst.set_reload(16_000_000); // 1s
         syst.enable_counter();
         syst.enable_interrupt();
     });
 }
 
-exception!(SYS_TICK, tick);
-
-fn tick() {
-    interrupt::free(|cs| {
-        let hstdout = HSTDOUT.borrow(cs);
-        if let Some(hstdout) = hstdout.borrow_mut().as_mut() {
-            writeln!(*hstdout, "Tick").ok();
-        }
-
-        if let Some(nvic) = NVIC.borrow(cs).borrow_mut().as_mut() {
-            nvic.set_pending(Interrupt::TIMER1);
-        }
-    });
-}
-
 interrupt!(TIMER1, tock, locals: {
      tocks: u32 = 0;
+     led_state: bool = false;
  });
 
 fn tock(l: &mut TIMER1::Locals) {
@@ -67,8 +70,24 @@ fn tock(l: &mut TIMER1::Locals) {
 
     interrupt::free(|cs| {
         let hstdout = HSTDOUT.borrow(cs);
-        if let Some(hstdout) = hstdout.borrow_mut().as_mut() {
-            writeln!(*hstdout, "Tock ({})", l.tocks).ok();
+
+        let nrfp = NRFP.borrow(cs);
+        if let Some(nrf_p) = nrfp.borrow_mut().as_mut() {
+            let gpio = &*nrf_p.GPIO;
+
+            let pin19 = gpio.out.read().pin19().bit();
+
+            if let Some(hstdout) = hstdout.borrow_mut().as_mut() {
+                writeln!(*hstdout, "{}", pin19).ok();
+            }
+
+            if l.led_state {
+                gpio.out.write(|w| w.pin19().clear_bit());
+                l.led_state = false;
+            } else {
+                gpio.out.write(|w| w.pin19().set_bit());
+                l.led_state = true;
+            }
         }
     });
 }

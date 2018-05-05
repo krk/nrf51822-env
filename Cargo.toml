@@ -6,7 +6,7 @@ keywords = ["arm", "cortex-m", "template"]
 license = "MIT OR Apache-2.0"
 name = "nrf51822-quickstart"
 repository = "https://github.com/krk/nrf61822-quickstart"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 cortex-m = "0.4.0"
@@ -20,7 +20,7 @@ panic-semihosting = "0.1.0"
 # Uncomment for the device example.
 [dependencies.nrf51822]
 features = ["rt"]
-version = "0.1.1"
+version = "0.1.2"
 
 [profile.release]
 debug = true
