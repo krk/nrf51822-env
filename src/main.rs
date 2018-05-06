@@ -44,6 +44,22 @@ fn main() {
             timer1.cc[0].write(|w| unsafe { w.bits(1000) });
             timer1.intenset.write(|w| w.compare0().set());
             timer1.tasks_start.write(|w| unsafe { w.bits(1) });
+
+            let gpio = &*nrf_p.GPIO;
+            let pin19_cnf = &gpio.pin_cnf[19];
+
+            pin19_cnf.write(|w| {
+                w.dir()
+                    .output()
+                    .drive()
+                    .s0d1()
+                    .pull()
+                    .disabled()
+                    .sense()
+                    .disabled()
+                    .input()
+                    .disconnect()
+            });
         }
 
         *NRFP.borrow(cs).borrow_mut() = Some(nrf_p);
